@@ -1,12 +1,24 @@
 {
-  "name": "visionflow",
+  "name": "visionflow-monorepo",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "private": true,
+  "description": "Enterprise-grade computer vision platform",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "pnpm --parallel --filter './apps/*' dev",
+    "build": "pnpm --filter './apps/*' --filter './packages/*' build",
+    "lint": "pnpm --parallel --filter './apps/*' --filter './packages/*' lint",
+    "test": "pnpm --parallel --filter './apps/*' test",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "type-check": "pnpm --filter './apps/web' type-check",
+    "clean": "pnpm --parallel --filter './apps/*' --filter './packages/*' clean"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "devDependencies": {
+    "prettier": "^3.1.0",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  }
 }

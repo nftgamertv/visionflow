@@ -1,0 +1,18 @@
+{
+  "extends": "@visionflow/typescript-config-custom/nextjs.json",
+  "compilerOptions": {
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@visionflow/shared-types": ["../../packages/shared-types/src"],
+      "@visionflow/ui": ["../../packages/ui/src"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}
