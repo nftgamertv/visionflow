@@ -1,0 +1,104 @@
+version: '3.8'
+
+services:
+  # Next.js Web Application
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - api
+    networks:
+      - visionflow-network
+
+  # FastAPI Backend
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./apps/api:/app
+    environment:
+      - SUPABASE_URL=http://supabase-kong:8000
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}
+      - DATABASE_URL=postgresql://postgres:postgres@supabase-db:6543/postgres
+      - REDIS_URL=redis://redis:6379
+      - S3_ENDPOINT_URL=${S3_ENDPOINT_URL}
+      - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID}
+      - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+      - DEBUG=true
+    depends_on:
+      - redis
+      - supabase-db
+    networks:
+      - visionflow-network
+
+  # ARQ Workers for Background Tasks
+  workers:
+    build:
+      context: ./apps/workers
+      dockerfile: Dockerfile
+    volumes:
+      - ./apps/workers:/app
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgresql://postgres:postgres@supabase-db:6543/postgres
+      - S3_ENDPOINT_URL=${S3_ENDPOINT_URL}
+      - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID}
+      - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+    depends_on:
+      - redis
+      - supabase-db
+    networks:
+      - visionflow-network
+
+  # Redis for ARQ Task Queue
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - visionflow-network
+
+  # Supabase Local Stack (managed by Supabase CLI)
+  # Note: The actual Supabase services are started via `supabase start`
+  # This includes: postgres, studio, kong, auth, realtime, storage-api, etc.
+  # We reference them here for documentation but they're managed externally
+
+  supabase-db:
+    image: supabase/postgres:15.1.0.147
+    ports:
+      - "54322:5432"  # Direct Postgres
+      - "54321:6543"  # Pgbouncer (REQUIRED for production parity)
+    environment:
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - supabase-db-data:/var/lib/postgresql/data
+    networks:
+      - visionflow-network
+
+volumes:
+  redis-data:
+  supabase-db-data:
+
+networks:
+  visionflow-network:
+    driver: bridge

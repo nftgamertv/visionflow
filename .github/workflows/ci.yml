@@ -1,0 +1,227 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  # Lint Python code
+  lint-python:
+    name: Lint Python (API & Workers)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install black isort mypy
+          cd apps/api && pip install -r requirements.txt
+          cd ../workers && pip install -r requirements.txt
+
+      - name: Run black
+        run: |
+          black --check apps/api apps/workers
+
+      - name: Run isort
+        run: |
+          isort --check-only apps/api apps/workers
+
+      - name: Run mypy
+        run: |
+          mypy apps/api apps/workers
+        continue-on-error: true
+
+  # Lint frontend code
+  lint-frontend:
+    name: Lint Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run ESLint
+        run: pnpm run lint
+
+      - name: Run Prettier
+        run: pnpm run format:check
+
+  # Test Python code
+  test-python:
+    name: Test Python
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          cd apps/api
+          pip install -r requirements.txt
+          pip install pytest pytest-cov httpx
+
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+          REDIS_URL: redis://localhost:6379
+          SUPABASE_JWT_SECRET: test-secret
+          S3_ENDPOINT_URL: http://localhost:9000
+          S3_ACCESS_KEY_ID: test
+          S3_SECRET_ACCESS_KEY: test
+          S3_BUCKET_NAME: test-bucket
+        run: |
+          cd apps/api
+          pytest --cov=app --cov-report=xml
+        continue-on-error: true
+
+  # Type check frontend
+  type-check-frontend:
+    name: Type Check Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run type check
+        run: pnpm run type-check
+
+  # Check schema synchronization
+  check-schema-sync:
+    name: Check Schema Sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pnpm install --frozen-lockfile
+          cd apps/api && pip install -r requirements.txt
+
+      - name: Generate OpenAPI schema
+        env:
+          SUPABASE_JWT_SECRET: test-secret
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+          REDIS_URL: redis://localhost:6379
+          S3_ENDPOINT_URL: http://localhost:9000
+          S3_ACCESS_KEY_ID: test
+          S3_SECRET_ACCESS_KEY: test
+          S3_BUCKET_NAME: test-bucket
+        run: |
+          cd apps/api
+          python -c "from app.main import app; import json; print(json.dumps(app.openapi()))" > ../../packages/shared-types/openapi.json
+
+      - name: Check for schema changes
+        run: |
+          git diff --exit-code packages/shared-types/
+        continue-on-error: true
+
+  # Build all packages
+  build:
+    name: Build All Packages
+    runs-on: ubuntu-latest
+    needs: [lint-frontend, type-check-frontend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all packages
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+          NEXT_PUBLIC_API_URL: http://localhost:8000
+        run: pnpm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts
+          path: apps/web/.next
+          retention-days: 1
