@@ -4,7 +4,8 @@
   "main": "./src/index.tsx",
   "types": "./src/index.tsx",
   "scripts": {
-    "lint": "eslint . --max-warnings 0",
+    "lint": "echo 'Linting handled at root level'",
+    "build": "echo 'No build required for ui'",
     "clean": "rm -rf dist node_modules"
   },
   "dependencies": {

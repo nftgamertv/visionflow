@@ -1,0 +1,3 @@
+{
+  "extends": ["@visionflow/eslint-config-custom"]
+}
