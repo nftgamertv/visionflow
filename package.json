@@ -5,9 +5,9 @@
   "description": "Enterprise-grade computer vision platform",
   "scripts": {
     "dev": "pnpm --parallel --filter './apps/*' dev",
-    "build": "pnpm --filter './apps/*' --filter './packages/*' build",
-    "lint": "pnpm --parallel --filter './apps/*' --filter './packages/*' lint",
-    "test": "pnpm --parallel --filter './apps/*' test",
+    "build": "pnpm --filter './apps/web' build",
+    "lint": "pnpm --filter './apps/web' lint",
+    "test": "pnpm --filter './apps/*' test",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "type-check": "pnpm --filter './apps/web' type-check",

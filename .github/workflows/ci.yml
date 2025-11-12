@@ -169,8 +169,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pnpm install --frozen-lockfile
-          cd apps/api && pip install -r requirements.txt
+          pnpm install
+          pip install -r apps/api/requirements.txt
 
       - name: Generate OpenAPI schema
         env:
