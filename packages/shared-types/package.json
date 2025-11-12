@@ -5,6 +5,8 @@
   "types": "./src/index.ts",
   "scripts": {
     "generate-types": "node scripts/generate-types.js",
+    "lint": "echo 'No linting for shared-types'",
+    "build": "echo 'No build required for shared-types'",
     "clean": "rm -rf dist node_modules"
   },
   "dependencies": {

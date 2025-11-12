@@ -22,8 +22,8 @@ jobs:
       - name: Install dependencies
         run: |
           pip install black isort mypy
-          cd apps/api && pip install -r requirements.txt
-          cd ../workers && pip install -r requirements.txt
+          pip install -r apps/api/requirements.txt
+          pip install -r apps/workers/requirements.txt
 
       - name: Run black
         run: |
@@ -57,7 +57,7 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install
 
       - name: Run ESLint
         run: pnpm run lint
@@ -139,7 +139,7 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install
 
       - name: Run type check
         run: pnpm run type-check
@@ -210,7 +210,7 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install
 
       - name: Build all packages
         env:
